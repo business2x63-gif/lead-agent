@@ -1,63 +1,52 @@
-# Redesign Lead Agent
+# Lead Agent
 
-Find local businesses with **outdated websites** — your best website-redesign
-prospects — in any US city + niche. Runs 100% on your own machine from a
-browser dashboard. **No API keys, no signups, no paid services.**
+Find local businesses with **outdated websites** — your best redesign
+prospects — in any US city + niche. No API keys, no installs, no signups.
 
-## Quick start (browser dashboard)
+## Start and go
 
-```bash
-pip install -r requirements.txt
-python webapp/app.py
+1. Install Python from [python.org/downloads](https://www.python.org/downloads/)
+   (one time; on Windows check "Add Python to PATH").
+2. Download this repo (green **Code** button → **Download ZIP** → unzip).
+3. Double-click **`run-windows.bat`** (Windows) or **`run-mac.command`** (Mac) —
+   or from a terminal: `python start.py`
+
+Then just type:
+
+```
+  What kind of business?   dentist
+  What city?               Austin, TX
+  How many businesses?     (Enter = 60)
+  Include NO-website ones? (Enter = no)
 ```
 
-Open **http://127.0.0.1:5000** in your browser, type a niche
-(`dentist`, `plumber`, `roofer`…) and a city (`Austin, TX`), hit
-**Find Leads**. The agent:
+It finds the businesses, checks every website, prints the hottest prospects
+ranked by how outdated their site is, and saves everything to
+`leads_<niche>_<city>.csv` in the same folder.
 
-1. **Scrapes** the Yellowpages directory for local businesses in that
-   city + niche (name, phone, address, website, rating, reviews, categories).
-2. **Audits every website** for outdated-technology signals.
-3. **Ranks** all leads by an "outdated score", hottest first, in a table
-   with one-click **CSV download**.
+## What it flags (the score)
 
-## How websites are scored
+| Problem | Points |
+|---|---|
+| No website at all | 50 |
+| Site down | 40 |
+| Not mobile-friendly | 25 |
+| No HTTPS / stale copyright / Flash-frames | 20 |
+| Old jQuery | 15 |
+| Old WordPress exposed / legacy HTML / slow load / blocks bots | 10 |
+| Wix/GoDaddy DIY builder / bloated page | 5 |
 
-| Signal | Weight | What it means |
-|---|---|---|
-| `no_website` | 50 | Business has **no website at all** (hottest lead) |
-| `unreachable` | 40 | Site is down or broken |
-| `no_mobile_viewport` | 25 | Not mobile-responsive |
-| `stale_copyright` | 20 | Copyright year frozen 2+ years back (or missing) |
-| `flash_or_frames` | 20 | Flash / framesets / applets |
-| `no_https` | 20 | Serves only over plain HTTP |
-| `old_jquery` | 15 | jQuery 1.x / 2.x still in production |
-| `legacy_html` | 10 | `<font>`, `<center>`, `<marquee>`… |
-| `old_generator` | 10 | Old WordPress/Joomla/Drupal version exposed |
-| `blocked` | 10 | Site returns 403 to bots — verify manually in a browser |
-| `slow_load` | 10 | Homepage loads in > 4 s |
-| `diy_builder` | 5 | Wix / Squarespace / GoDaddy builder / Weebly |
-| `oversized_page` | 5 | 1.5 MB+ of HTML |
+**Score ≥ 40 = call them today.**
 
-**Score ≥ 40 = hot prospect.** Check the "include no-website" box to also
-get businesses with zero web presence.
+## Where the data comes from
 
-## Data sources (all keyless)
+Public Yellowpages.com listing pages, scraped from your own machine
+(keyless, paced ~1 page/second). Google Maps encrypts its data for
+non-browser clients and Yelp blocks automated access, so neither can be
+scraped reliably without a browser session.
 
-- **Yellowpages.com** — primary business directory (reliable, server-rendered).
-- Google Maps and Yelp are *not* used: Google encrypts results for
-  non-browser clients and Yelp blocks automated requests outright.
+## That's it
 
-## CLI alternative
-
-```bash
-python agent.py --demo   # sample run, no setup
-```
-
-## Notes
-
-- Scraping public directory pages is a gray zone — keep volumes modest
-  (this tool paces itself at ~1 page/second) and use leads for personal
-  outreach, not resale.
-- Some sites block datacenter IPs/automated requests (`blocked` signal);
-  those may look perfectly fine from your own browser.
+No config, no accounts, nothing to subscribe to. If a lead says
+"blocks bots — check manually", open their site yourself in a browser;
+some sites simply reject automated requests.
