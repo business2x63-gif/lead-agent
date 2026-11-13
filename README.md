@@ -1,62 +1,63 @@
 # Redesign Lead Agent
 
-Finds local businesses in a US city + niche whose websites look outdated —
-your best website-redesign prospects — and exports a ranked CSV.
+Find local businesses with **outdated websites** — your best website-redesign
+prospects — in any US city + niche. Runs 100% on your own machine from a
+browser dashboard. **No API keys, no signups, no paid services.**
 
-## How it works
-
-1. **Discovery** — Google Places API (New) text search: `{niche} in {city}`
-   (name, address, phone, website, rating, reviews).
-2. **Audit** — each website is fetched and scored 0–100+ on outdated signals:
-
-   | Signal | Weight | What it means |
-   |---|---|---|
-   | `unreachable` | 40 | Site is down or broken |
-   | `no_mobile_viewport` | 25 | Not mobile-responsive |
-   | `stale_copyright` | 20 | Copyright year frozen 2+ years ago (or missing) |
-   | `flash_or_frames` | 20 | Flash / framesets / applets |
-   | `old_jquery` | 15 | jQuery 1.x / 2.x still in production |
-   | `no_https` | 20 | Serves only over plain HTTP |
-   | `legacy_html` | 10 | `<font>`, `<center>`, `<marquee>`… |
-   | `old_generator` | 10 | Old WordPress/Joomla/Drupal version meta |
-   | `slow_load` | 10 | Homepage loads in > 4 s |
-   | `diy_builder` | 5 | Wix / Squarespace / GoDaddy builder / Weebly |
-   | `oversized_page` | 5 | 1.5 MB+ of HTML |
-
-   Score ≥ 40 = hot prospect. Results are sorted best-first.
-3. **Report** — CSV with contact info, signals, and notes per lead.
-
-## Setup
+## Quick start (browser dashboard)
 
 ```bash
 pip install -r requirements.txt
-export GOOGLE_PLACES_API_KEY=your_key   # enable "Places API (New)" in Google Cloud
+python webapp/app.py
 ```
 
-Get a key at [Google Cloud Console](https://console.cloud.google.com/) →
-APIs & Services → enable **Places API (New)**. Text Search pricing is
-roughly $32 per 1,000 requests (a 60-business run = a few cents).
+Open **http://127.0.0.1:5000** in your browser, type a niche
+(`dentist`, `plumber`, `roofer`…) and a city (`Austin, TX`), hit
+**Find Leads**. The agent:
 
-## Usage
+1. **Scrapes** the Yellowpages directory for local businesses in that
+   city + niche (name, phone, address, website, rating, reviews, categories).
+2. **Audits every website** for outdated-technology signals.
+3. **Ranks** all leads by an "outdated score", hottest first, in a table
+   with one-click **CSV download**.
+
+## How websites are scored
+
+| Signal | Weight | What it means |
+|---|---|---|
+| `no_website` | 50 | Business has **no website at all** (hottest lead) |
+| `unreachable` | 40 | Site is down or broken |
+| `no_mobile_viewport` | 25 | Not mobile-responsive |
+| `stale_copyright` | 20 | Copyright year frozen 2+ years back (or missing) |
+| `flash_or_frames` | 20 | Flash / framesets / applets |
+| `no_https` | 20 | Serves only over plain HTTP |
+| `old_jquery` | 15 | jQuery 1.x / 2.x still in production |
+| `legacy_html` | 10 | `<font>`, `<center>`, `<marquee>`… |
+| `old_generator` | 10 | Old WordPress/Joomla/Drupal version exposed |
+| `blocked` | 10 | Site returns 403 to bots — verify manually in a browser |
+| `slow_load` | 10 | Homepage loads in > 4 s |
+| `diy_builder` | 5 | Wix / Squarespace / GoDaddy builder / Weebly |
+| `oversized_page` | 5 | 1.5 MB+ of HTML |
+
+**Score ≥ 40 = hot prospect.** Check the "include no-website" box to also
+get businesses with zero web presence.
+
+## Data sources (all keyless)
+
+- **Yellowpages.com** — primary business directory (reliable, server-rendered).
+- Google Maps and Yelp are *not* used: Google encrypts results for
+  non-browser clients and Yelp blocks automated requests outright.
+
+## CLI alternative
 
 ```bash
-python agent.py --city "Austin, TX" --niche "dentist" --out leads.csv
-python agent.py --city "Miami, FL" --niche "plumber" --max-results 60
-python agent.py --demo        # sample data, no API key needed
+python agent.py --demo   # sample run, no setup
 ```
-
-Options: `--workers 8` (parallel audits), `--include-missing-websites`
-(also list businesses with **no website at all** — often the hottest leads),
-`--out leads.csv`.
-
-## Output columns
-
-`score, business_name, phone, address, website, rating, reviews,
-outdated_signals, notes, maps_url, place_id`
 
 ## Notes
 
-- Google Places doesn't expose owner names; `business_name` + `phone` is the
-  standard outreach identifier for local businesses (many are owner-operated).
-- The audit uses polite heuristics (one request per site, browser UA). Stay
-  within Google's ToS for Places and robots.txt etiquette for site fetches.
+- Scraping public directory pages is a gray zone — keep volumes modest
+  (this tool paces itself at ~1 page/second) and use leads for personal
+  outreach, not resale.
+- Some sites block datacenter IPs/automated requests (`blocked` signal);
+  those may look perfectly fine from your own browser.

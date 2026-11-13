@@ -16,8 +16,16 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
+BASE_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
 SIGNAL_WEIGHTS = {
+    "no_website": 50,
     "unreachable": 40,
+    "blocked": 10,
     "no_https": 20,
     "no_mobile_viewport": 25,
     "stale_copyright": 20,
@@ -77,29 +85,41 @@ def audit_website(url: str, timeout: int = 15) -> dict:
     response = None
 
     for scheme in ("https", "http"):
-        try:
-            started = datetime.now()
-            response = requests.get(
-                f"{scheme}://{parsed.netloc}{parsed.path or '/'}",
-                headers={"User-Agent": USER_AGENT},
-                timeout=timeout,
-                allow_redirects=True,
-                verify=True,
-            )
-            load_seconds = (datetime.now() - started).total_seconds()
-            status_code = response.status_code
-            if scheme == "https":
-                https_ok = True
-            if status_code == 200:
-                result["reachable"] = True
-                html = response.text or ""
-                break
-        except requests.RequestException:
-            continue
+        for attempt in range(2):
+            try:
+                started = datetime.now()
+                response = requests.get(
+                    f"{scheme}://{parsed.netloc}{parsed.path or '/'}",
+                    headers=BASE_HEADERS,
+                    timeout=timeout,
+                    allow_redirects=True,
+                    verify=True,
+                )
+                load_seconds = (datetime.now() - started).total_seconds()
+                status_code = response.status_code
+                if scheme == "https":
+                    https_ok = True
+                if status_code == 200:
+                    result["reachable"] = True
+                    html = response.text or ""
+                    break
+                if status_code in (401, 403, 429, 503):
+                    break
+            except requests.RequestException:
+                continue
+        if result["reachable"] or status_code in (401, 403, 429, 503):
+            break
 
     if not result["reachable"]:
-        result["signals"].append("unreachable")
-        result["notes"].append(f"last status {status_code or 'no response'}")
+        if status_code in (401, 403, 429, 503):
+            result["signals"].append("blocked")
+            result["notes"].append(
+                f"site returned {status_code} to automated check — "
+                "may be fine in a real browser"
+            )
+        else:
+            result["signals"].append("unreachable")
+            result["notes"].append(f"last status {status_code or 'no response'}")
         return _finalize(result)
 
     if not https_ok:
