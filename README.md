@@ -3,6 +3,12 @@
 Find local businesses with **outdated websites** — your best redesign
 prospects — in any US city + niche. No API keys, no installs, no signups.
 
+## Where it runs
+
+It runs in a **terminal window on your own computer** — not in a browser.
+You double-click the launcher, a black text window opens, you type your
+answers there, and results appear in that window plus a CSV file.
+
 ## Start and go
 
 1. Install Python from [python.org/downloads](https://www.python.org/downloads/)
@@ -18,11 +24,22 @@ Then just type:
   What city?               Austin, TX
   How many businesses?     (Enter = 60)
   Include NO-website ones? (Enter = no)
+  Skip previous runs?      (Enter = yes)
 ```
 
 It finds the businesses, checks every website, prints the hottest prospects
 ranked by how outdated their site is, and saves everything to
 `leads_<niche>_<city>.csv` in the same folder.
+
+## Never see the same business twice
+
+The agent remembers every business it has ever shown you
+(`seen_businesses.json` in the same folder). Next time you run it — even
+weeks later — it **skips all of those and only shows NEW businesses**.
+
+- Enter (or `y`) → only new businesses
+- `n` → show everything again, but memory is still updated
+- `reset` → wipe the memory and start fresh
 
 ## What it flags (the score)
 
@@ -41,9 +58,15 @@ ranked by how outdated their site is, and saves everything to
 ## Where the data comes from
 
 Public Yellowpages.com listing pages, scraped from your own machine
-(keyless, paced ~1 page/second). Google Maps encrypts its data for
-non-browser clients and Yelp blocks automated access, so neither can be
-scraped reliably without a browser session.
+(keyless, paced ~1 page/second).
+
+Straight answer about "scrape the whole internet": **every major source
+actively blocks automated access** — Google Maps encrypts its data for
+non-browser clients, Yelp/Manta/ChamberofCommerce return 403 to robots,
+and Bing renders results only in JavaScript. Yellowpages is the one
+directory that serves real, complete data (name, phone, address,
+website, rating) to a simple scraper. It covers the same US local
+businesses, so you're not missing leads.
 
 ## That's it
 

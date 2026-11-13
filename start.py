@@ -11,6 +11,8 @@ prospects, and saves everything to a CSV file.
 """
 
 import csv
+import json
+import os
 import re
 import sys
 import time
@@ -62,6 +64,34 @@ RATING_WORDS = {
     "three_half": 3.5, "three": 3.0, "four_half": 4.5, "four": 4.0,
     "five": 5.0,
 }
+
+
+MEMORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "seen_businesses.json")
+
+
+def load_memory():
+    if os.path.exists(MEMORY_FILE):
+        try:
+            with open(MEMORY_FILE, encoding="utf-8") as f:
+                return set(json.load(f))
+        except Exception:
+            return set()
+    return set()
+
+
+def save_memory(keys):
+    try:
+        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(sorted(keys), f)
+    except OSError:
+        pass
+
+
+def lead_key(lead):
+    name = re.sub(r"\W+", "", lead["business_name"].lower())
+    phone = re.sub(r"\D", "", lead["phone"])
+    return f"{name}:{phone}"
 
 
 def fetch(url, timeout=20, redirects=3):
@@ -310,12 +340,43 @@ def main():
         how_many = 60
     no_site = ask("  Also list businesses with NO website? (y/N     ): ",
                    "n").lower().startswith("y")
+    memory = load_memory()
+    skip_mode = ask("  Skip businesses you've seen before? (Enter = yes, "
+                    "n = show all, reset = wipe memory): ", "y").lower()
+    if skip_mode == "reset":
+        memory = set()
+        skip_previous = False
+        print("  Memory wiped - everything will show as new.")
+    else:
+        skip_previous = not skip_mode.startswith("n")
+    if memory:
+        print(f"  ({len(memory)} businesses from previous runs in memory)")
 
     print(f"\n  Step 1/2: finding {niche}s in {city} ...")
     leads = scrape(niche, city, max_results=how_many)
     if not leads:
         print("  Nothing found - try a broader niche or check spelling.")
         return 1
+
+    fresh = []
+    skipped = 0
+    for lead in leads:
+        key = lead_key(lead)
+        if skip_previous and key in memory:
+            skipped += 1
+            continue
+        memory.add(key)
+        fresh.append(lead)
+    leads = fresh
+    if not leads:
+        print(f"  All {skipped} businesses were already in your previous "
+              "runs. Try another niche/city, or answer 'reset' at the "
+              "last question to see everything again.")
+        save_memory(memory)
+        return 0
+    if skipped:
+        print(f"  ({skipped} previously-seen businesses skipped - "
+              "you only get NEW ones)")
 
     with_site = [l for l in leads if l["website"]]
     print(f"\n  Step 2/2: checking {len(with_site)} websites "
@@ -353,6 +414,7 @@ def main():
                              l["reviews"], ";".join(l["signals"]),
                              "; ".join(l["notes"])])
 
+    save_memory(memory)
     hot = [l for l in leads if l["score"] >= 40]
     print(f"\n  DONE. {len(leads)} leads saved to:  {csv_name}")
     print(f"  {len(hot)} HOT prospects (score >= 40). Top of the list:\n")
